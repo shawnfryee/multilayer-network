@@ -1,7 +1,7 @@
 # Multilayer Networking Graduate Project
 
 ## Introduction
-This repository contains the code and documentation for the Multilayer Networking Graduate Project conducted by Kyatt Spessert, Danielle Ware, Luke Redwine, Shawn Frye, and Jerrick Dubose.
+This repository contains the code and documentation for the Multilayer Networking Graduate Project conducted by Kyatt Spessert, Danielle Ware, Luke Redwine, Shawn Frye, and Jerrick Dubose for CSE-6693.
 
 ## Overview
 The project focuses on exploring the applications and implementations of multilayer networking techniques in the context of graduate-level research.
