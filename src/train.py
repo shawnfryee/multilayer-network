@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
@@ -40,3 +41,13 @@ def fit_cnn_model(X_train, Y_train, X_test, Y_test, savedir, num_layers=2,
     utils.save_model(model, os.path.join(savedir, 'savd_model_' + date_time))
 
     return model
+
+# Takes in a list of images and model, calcs the uncertainty and outputs a list of uncertainties
+def calculate_uncertainty(model, test_images): # TODO Maybe make it output a tuple with image name and its uncertainty
+    uncertainties = []
+    for image in test_images:
+        prediction = model.predict(image)
+        # Calculate uncertainty based on prediction probabilities
+        uncertainty = np.mean(np.var(prediction, axis=1))
+        uncertainties.append(uncertainty)
+    return uncertainties
