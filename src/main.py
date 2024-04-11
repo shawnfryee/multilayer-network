@@ -4,7 +4,7 @@ import train
 import numpy as np
 from PIL import Image
 from sklearn.model_selection import train_test_split
-
+import tensorflow as tf
 
 def make_output_directory():
     current_project_directory = os.getcwd()
@@ -19,8 +19,8 @@ def make_output_directory():
     return output_directory
 
 
-def load_data(image_folder, label_folder):
-    # load n sort dataset TODO needs to be expanded for subdirs for stop, go, left, right. This is just very basic
+def load_data(image_folder, label_folder, target_size=(224, 224)):
+    # Load and sort dataset
     image_files = os.listdir(image_folder)
     label_files = os.listdir(label_folder)
     image_files.sort()
@@ -30,36 +30,67 @@ def load_data(image_folder, label_folder):
     labels = []
 
     # Load images and labels
-    for img_file, label_file in zip(image_files, label_files):
+    for img_file in image_files:
         img_path = os.path.join(image_folder, img_file)
+
+        label_file = img_file.replace(".jpg", ".txt").replace(".jpeg", ".txt")
         label_path = os.path.join(label_folder, label_file)
 
         img = Image.open(img_path)
-        img_array = np.array(img)
+        img = img.resize(target_size)  # Resize image to target size
+        img_array = np.array(img) / 255
         images.append(img_array)
 
-        # TODO needs to be expanded for stop, go, left, right labels. This is just very basic
+        # Load label from text file
         with open(label_path, 'r') as f:
-            label = int(f.readline().strip())  # Assuming label is a single digit
+            label_str = f.readline().strip()
+
+            # Convert label string to numerical representation
+            if label_str == 'stop':
+                label = 0
+            elif label_str == 'continue':
+                label = 1
+            elif label_str == 'left':
+                label = 2
+            elif label_str == 'right':
+                label = 3
+            else:
+                print(label_path)
+                raise ValueError("Unknown label: {}".format(label_str))
+
         labels.append(label)
 
     images = np.array(images)
     labels = np.array(labels)
 
-    # split data into training and testing sets
+    # Split data into training and testing sets
     X_train, X_test, Y_train, Y_test = train_test_split(images, labels, test_size=0.2, random_state=42)
 
     return X_train, Y_train, X_test, Y_test
 def main():
     output_directory = make_output_directory()
 # TODO make a config file that is read to change number of epochs and different parameters for optimizing ther model
+    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+
+    if tf.config.experimental.list_physical_devices('GPU'):
+        print("TensorFlow will be able to use the GPU!")
+    else:
+        print(
+            "Make sure your system meets all requirements and the TensorFlow version is compatible with the installed CUDA and cuDNN.")
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
     #get dataset
     data_folder = os.path.join(os.path.dirname(os.getcwd()), "dataset/")
     images_folder = os.path.join(data_folder, "images")
     labels_folder = os.path.join(data_folder, "labels")
-
+    num_classes = 4 # stop, continue, right, left
     #setup training stuff
     X_train, Y_train, X_test, Y_test = load_data(images_folder, labels_folder)
+    Y_train = tf.keras.utils.to_categorical(Y_train, num_classes=num_classes)
+    Y_test = tf.keras.utils.to_categorical(Y_test, num_classes=num_classes)
+    X_train = X_train.astype(np.float32)
+    X_test = X_test.astype(np.float32)
     model = train.fit_cnn_model(X_train, Y_train, X_test, Y_test, output_directory)
 
 
