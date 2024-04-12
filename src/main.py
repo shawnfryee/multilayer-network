@@ -1,5 +1,8 @@
 import os
 import configparser
+
+from tensorflow.python.keras.utils import np_utils
+
 import train
 import numpy as np
 from PIL import Image
@@ -36,26 +39,15 @@ def load_data(image_folder, label_folder, target_size=(224, 224)):
         label_file = img_file.replace(".jpg", ".txt").replace(".jpeg", ".txt")
         label_path = os.path.join(label_folder, label_file)
 
-        img = Image.open(img_path)
-        img = img.resize(target_size)  # Resize image to target size
-        img_array = np.array(img) / 255
+        img = Image.open(img_path).resize(target_size)
+        img_array = np.array(img) / 255.0
         images.append(img_array)
 
-        # Load label from text file
         with open(label_path, 'r') as f:
             label_str = f.readline().strip()
-
-            # Convert label string to numerical representation
-            if label_str == 'stop':
-                label = 0
-            elif label_str == 'continue':
-                label = 1
-            elif label_str == 'left':
-                label = 2
-            elif label_str == 'right':
-                label = 3
-            else:
-                print(label_path)
+            label_dict = {'stop': 0, 'continue': 1, 'left': 2, 'right': 3}
+            label = label_dict.get(label_str, -1)
+            if label == -1:
                 raise ValueError("Unknown label: {}".format(label_str))
 
         labels.append(label)
@@ -63,10 +55,11 @@ def load_data(image_folder, label_folder, target_size=(224, 224)):
     images = np.array(images)
     labels = np.array(labels)
 
-    # Split data into training and testing sets
+
     X_train, X_test, Y_train, Y_test = train_test_split(images, labels, test_size=0.2, random_state=42)
 
     return X_train, Y_train, X_test, Y_test
+
 def main():
     output_directory = make_output_directory()
 # TODO make a config file that is read to change number of epochs and different parameters for optimizing ther model

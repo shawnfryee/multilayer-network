@@ -3,7 +3,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_arra
 from tensorflow.keras.preprocessing.image import save_img
 
 
-def augment_images(image_dir, save_dir, augmentations, save_format='jpeg'):
+def augment_images(image_dir, save_dir, augmentations, save_format='jpg'):
 
 
     datagen = ImageDataGenerator(**augmentations)
@@ -38,10 +38,8 @@ def augment_images(image_dir, save_dir, augmentations, save_format='jpeg'):
 
 # Configuration for data augmentation
 augmentations = {
-    'rotation_range': 40,
+    'rotation_range': 35,
     'zoom_range': 0.2,
-    'horizontal_flip': True,
-    'vertical_flip': True,
     'brightness_range': (0.8, 1.2),
     'shear_range': 0.2,
     'channel_shift_range': 50.0,
