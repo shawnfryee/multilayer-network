@@ -1,16 +1,11 @@
 import os
-import configparser
-
-from tensorflow.python.keras.utils import np_utils
-
+import retrain
 import train
 import numpy as np
 from PIL import Image
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
-
 from tensorflow.keras.utils import image_dataset_from_directory
-from tensorflow.keras.preprocessing.image import random_rotation, random_brightness
 
 
 def make_output_directory():
@@ -26,10 +21,9 @@ def make_output_directory():
     return output_directory
 
 
-def load_data(image_folder, label_folder, target_size=(224, 224)):
+def load_data(image_folder, target_size=(224, 224)):
     batch_size = 32
-    image_height = target_size[1]
-    image_width = target_size[0]
+
 
     train_ds = image_dataset_from_directory(
         image_folder,
@@ -53,56 +47,35 @@ def load_data(image_folder, label_folder, target_size=(224, 224)):
         shuffle=True
     )
 
-    # new_train = random_brightness(train_ds, (0, 30))
-    # new_val = random_brightness(val_ds, (0, 30))
-    #
-    # new_train = random_rotation(new_train, 36)
-    # new_val = random_rotation(new_val, 36)
-
     print(train_ds.class_names)
 
     return train_ds, val_ds
 
 
-def load_data_sean(image_folder, label_folder, target_size=(224, 224)):
-    # Load and sort dataset
-    image_files = os.listdir(image_folder)
-    label_files = os.listdir(label_folder)
-    image_files.sort()
-    label_files.sort()
+def entropy(predictions):
+    return -np.sum(predictions * np.log(predictions + 1e-5), axis=1)  # Adding a small number to avoid log(0)
 
-    images = []
-    labels = []
+def uncertain_samples(val_ds, model, percentile=50):
+    all_preds = []
+    for images, _ in val_ds:
+        preds = model.predict(images)
+        all_preds.extend(preds)
 
-    # Load images and labels
-    for img_file in image_files:
-        img_path = os.path.join(image_folder, img_file)
+    uncertainties = entropy(np.array(all_preds))
+    threshold = np.percentile(uncertainties, percentile)
 
-        label_file = img_file.replace(".jpg", ".txt").replace(".jpeg", ".txt")
-        label_path = os.path.join(label_folder, label_file)
+    uncertain_images = []
+    uncertain_labels = []
 
-        img = Image.open(img_path).resize(target_size)
-        img_array = np.array(img) / 255.0
-        images.append(img_array)
+    for images, labels in val_ds:
+        preds = model.predict(images)
+        batch_uncertainties = entropy(preds)
+        for img, label, uncertainty in zip(images, labels, batch_uncertainties):
+            if uncertainty > threshold:
+                uncertain_images.append(img.numpy())
+                uncertain_labels.append(label.numpy())
 
-        with open(label_path, 'r') as f:
-            label_str = f.readline()#.strip()
-            label_dict = {'stop': 0, 'continue': 1, 'left': 2, 'right': 3}
-            label = label_dict.get(label_str, -1)
-            if label == -1:
-                print(label)
-                raise ValueError("Unknown label: {}".format(label_str))
-
-        labels.append(label)
-
-    images = np.array(images)
-    labels = np.array(labels)
-
-
-    X_train, X_test, Y_train, Y_test = train_test_split(images, labels, test_size=0.2, random_state=42)
-
-    return X_train, Y_train, X_test, Y_test
-
+    return np.array(uncertain_images), np.array(uncertain_labels)
 
 def main():
     output_directory = make_output_directory()
@@ -119,21 +92,18 @@ def main():
         tf.config.experimental.set_memory_growth(gpu, True)
     #get dataset
     data_folder = os.path.join(os.path.dirname(os.getcwd()), "dataset/")
-    images_folder = os.path.join(data_folder, "images")
-    labels_folder = os.path.join(data_folder, "labels")
+
     num_classes = 4 # stop, continue, right, left
 
     #setup training stuff
-    train_x, test_x = load_data(data_folder, labels_folder)
-    # Y_train = tf.keras.utils.to_categorical(Y_train, num_classes=num_classes)
-    # Y_test = tf.keras.utils.to_categorical(Y_test, num_classes=num_classes)
-    # X_train = X_train.astype(np.float32)
-    # X_test = X_test.astype(np.float32)
-    # model = train.fit_cnn_model(X_train, Y_train, X_test, Y_test, output_directory)
-    train.fit_mode(train_x, test_x, output_directory)
+    train_x, test_x = load_data(data_folder)
 
-    # for batch in train_x.take(4):
-    #     print(batch[1])
+    model = train.fit_model(train_x, test_x, output_directory)
+    # Uncertainty estimation and filtering
+    uncertain_imgs, uncertain_labels = uncertain_samples(train_x, model, percentile=50) #retrain with top 50% (least certain)
+    print("uncertain images: {}", uncertain_imgs)
+    uncertain_ds = tf.data.Dataset.from_tensor_slices((uncertain_imgs, uncertain_labels)).batch(32)
+    retrain_history = retrain.finetune_model(model, uncertain_ds, test_x, output_directory)
 
 
 if __name__ == "__main__":
