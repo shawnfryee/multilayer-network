@@ -1,6 +1,7 @@
 import os
 import retrain
 import train
+import sys
 import numpy as np
 from PIL import Image
 from sklearn.model_selection import train_test_split
@@ -79,7 +80,10 @@ def uncertain_samples(val_ds, model, percentile=50):
 
 def main():
     output_directory = make_output_directory()
-# TODO make a config file that is read to change number of epochs and different parameters for optimizing ther model
+    log_file_path = os.path.join(output_directory, 'output_log.txt')
+    sys.stdout = open(log_file_path, 'w')
+
+    # TODO make a config file that is read to change number of epochs and different parameters for optimizing ther model
     print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
     if tf.config.experimental.list_physical_devices('GPU'):
@@ -100,7 +104,7 @@ def main():
 
     model = train.fit_model(train_x, test_x, output_directory)
     # Uncertainty estimation and filtering
-    uncertain_imgs, uncertain_labels = uncertain_samples(train_x, model, percentile=50) #retrain with top 50% (least certain)
+    uncertain_imgs, uncertain_labels = uncertain_samples(train_x, model, percentile=5) #retrain with top 5% (least certain)
     print("uncertain images: {}", uncertain_imgs)
     uncertain_ds = tf.data.Dataset.from_tensor_slices((uncertain_imgs, uncertain_labels)).batch(32)
     retrain_history = retrain.finetune_model(model, uncertain_ds, test_x, output_directory)
