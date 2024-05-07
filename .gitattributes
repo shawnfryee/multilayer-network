@@ -2,3 +2,4 @@
 *.npy filter=lfs diff=lfs merge=lfs -text
 dataset/tcg_data.npy filter=lfs diff=lfs merge=lfs -text
 dataset/tcg_dataset.zip filter=lfs diff=lfs merge=lfs -text
+dataset.zip filter=lfs diff=lfs merge=lfs -text

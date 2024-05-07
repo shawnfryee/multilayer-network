@@ -2,19 +2,20 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Conv1D, MaxPooling1D, Flatten
+from tensorflow.keras.layers import Dense, Dropout,  Flatten
 from tensorflow.keras.optimizers import Adam
-import utils
+from tensorflow.python.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.callbacks import EarlyStopping
+
 from datetime import datetime
 
-from tensorflow.python.keras.callbacks import EarlyStopping
-from tensorflow.python.keras.layers.convolutional import Conv2D
-from tensorflow.python.keras.layers.pooling import MaxPooling2D
 
 
-def fit_cnn_model(X_train, Y_train, X_test, Y_test, savedir, num_layers=2,
-                  num_filters=128, kernel_size=3, pool_size=2, dropout_rate=0.2, learning_rate=0.001,
-                  n_epochs=100, batch_size=96, verbose=1):
+def fit_model                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                (train, test, savedir, num_layers=2,
+              num_filters=128, kernel_size=3, pool_size=2, dropout_rate=0.2, learning_rate=0.001,
+              n_epochs=20, batch_size=96, verbose=1):
 
     model = Sequential()
     date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -31,15 +32,18 @@ def fit_cnn_model(X_train, Y_train, X_test, Y_test, savedir, num_layers=2,
     opt = Adam(learning_rate=learning_rate)
     model.compile(optimizer=opt, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
+    callback = EarlyStopping(monitor='loss', patience=3)
 
-    history = model.fit(X_train, Y_train,
+    history = model.fit(train, validation_data=test,
                         epochs=n_epochs,
                         batch_size=batch_size,
-                        validation_data=(X_test, Y_test),
-                        verbose=verbose)
+                        verbose=verbose,
+                        callbacks=[callback])
     model.summary()
 
-    scores = model.evaluate(X_test, Y_test)
+    print(history)
+
+    scores = model.evaluate(test)
     print("Loss: %.2f%%" % (scores[0]))
     print("Accuracy: %.2f%%" % (scores[1] * 100))
 
@@ -48,13 +52,3 @@ def fit_cnn_model(X_train, Y_train, X_test, Y_test, savedir, num_layers=2,
     print(f"Model saved to {model_path}")
 
     return model
-
-# Takes in a list of images and model, calcs the uncertainty and outputs a list of uncertainties
-def calculate_uncertainty(model, test_images): # TODO Maybe make it output a tuple with image name and its uncertainty
-    uncertainties = []
-    for image in test_images:
-        prediction = model.predict(image)
-        # Calculate uncertainty based on prediction probabilities
-        uncertainty = np.mean(np.var(prediction, axis=1))
-        uncertainties.append(uncertainty)
-    return uncertainties
