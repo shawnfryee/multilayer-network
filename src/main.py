@@ -80,8 +80,8 @@ def uncertain_samples(val_ds, model, percentile=50):
 
 def main():
     output_directory = make_output_directory()
-    log_file_path = os.path.join(output_directory, 'output_log.txt')
-    sys.stdout = open(log_file_path, 'w')
+    #log_file_path = os.path.join(output_directory, 'output_log.txt')
+    #sys.stdout = open(log_file_path, 'w')
 
     # TODO make a config file that is read to change number of epochs and different parameters for optimizing ther model
     print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))

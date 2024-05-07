@@ -15,7 +15,7 @@ from datetime import datetime
 
 def fit_model                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                (train, test, savedir, num_layers=2,
               num_filters=128, kernel_size=3, pool_size=2, dropout_rate=0.2, learning_rate=0.001,
-              n_epochs=1, batch_size=96, verbose=1):
+              n_epochs=20, batch_size=96, verbose=1):
 
     model = Sequential()
     date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

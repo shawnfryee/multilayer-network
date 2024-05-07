@@ -1,4 +1,4 @@
-name: proj_env
+name: proj_env2
 channels:
   - anaconda
   - defaults

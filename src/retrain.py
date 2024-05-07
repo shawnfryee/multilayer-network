@@ -6,10 +6,8 @@ import os
 from datetime import datetime
 
 
-
-
 def finetune_model(pretrained_model, train, test, savedir,
-                   learning_rate=0.0001, n_epochs=20, batch_size=96, verbose=1):
+                   learning_rate=0.0001, n_epochs=5, batch_size=96, verbose=1):
 
     pretrained_model.pop()  # Remove the last softmax layer
     pretrained_model.pop()  # Remove the second last dense layer
