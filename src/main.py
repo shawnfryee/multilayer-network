@@ -8,6 +8,44 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow.keras.utils import image_dataset_from_directory
 
+from sklearn.metrics import confusion_matrix, f1_score, recall_score, precision_score, accuracy_score, roc_curve
+import matplotlib.pyplot as plt
+
+# Define functions for evaluation metrics
+
+def calculate_metrics(true_labels, predicted_labels):
+    conf_matrix = confusion_matrix(true_labels, predicted_labels)
+    f1 = f1_score(true_labels, predicted_labels, average='weighted')
+    recall = recall_score(true_labels, predicted_labels, average='weighted')
+    precision = precision_score(true_labels, predicted_labels, average='weighted')
+    accuracy = accuracy_score(true_labels, predicted_labels)
+    return conf_matrix, f1, recall, precision, accuracy
+
+def plot_roc_curve(true_labels, predicted_probabilities):
+    fpr, tpr, _ = roc_curve(true_labels, predicted_probabilities)
+    plt.plot(fpr, tpr, marker='.')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve')
+    plt.show()
+
+def plot_accuracy_loss(history):
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model Accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
+
+def plot_log_loss(history):
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
 
 def make_output_directory():
     current_project_directory = os.getcwd()
@@ -103,11 +141,37 @@ def main():
     train_x, test_x = load_data(data_folder)
 
     model = train.fit_model(train_x, test_x, output_directory)
+
+    # Evaluate model on validation set
+    true_labels = []
+    predicted_probabilities = []
+    for images, labels in test_x:
+        true_labels.extend(labels.numpy())
+        preds = model.predict(images)
+        predicted_probabilities.extend(preds)
+    predicted_labels = np.argmax(predicted_probabilities, axis=1)
+
+    # Calculate metrics
+    conf_matrix, f1, recall, precision, accuracy = calculate_metrics(true_labels, predicted_labels)
+    print("Confusion Matrix:")
+    print(conf_matrix)
+    print("F1 Score:", f1)
+    print("Recall (R2):", recall)
+    print("Precision:", precision)
+    print("Accuracy:", accuracy)
+
+    # Plot ROC curve
+    plot_roc_curve(true_labels, np.array(predicted_probabilities))
+
     # Uncertainty estimation and filtering
     uncertain_imgs, uncertain_labels = uncertain_samples(train_x, model, percentile=5) #retrain with top 5% (least certain)
     print("uncertain images: {}", uncertain_imgs)
     uncertain_ds = tf.data.Dataset.from_tensor_slices((uncertain_imgs, uncertain_labels)).batch(32)
     retrain_history = retrain.finetune_model(model, uncertain_ds, test_x, output_directory)
+
+    # Plot accuracy and loss
+    plot_accuracy_loss(retrain_history)
+    plot_log_loss(retrain_history)
 
 
 if __name__ == "__main__":
